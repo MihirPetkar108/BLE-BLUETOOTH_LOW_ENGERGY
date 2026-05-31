@@ -13,10 +13,10 @@ This README explains how the pieces fit together, installation, running, testing
 
 ```mermaid
 flowchart LR
-  A[Android BLE app] -->|Telemetry| B(Orchestrator / agents.py)
-  B -->|Route requests| C[GraphHopper (local server)]
-  B -->|Summarize| D[Ollama local LLM]
-  B -->|Dispatch plan| E[Operator Console / Logs]
+  A["Android BLE app"] -->|Telemetry| B["Orchestrator (agents.py)"]
+  B -->|Route requests| C["GraphHopper (local server)"]
+  B -->|Summarize| D["Ollama (local LLM)"]
+  B -->|Dispatch plan| E["Operator Console / Logs"]
 ```
 
 ## Prerequisites
