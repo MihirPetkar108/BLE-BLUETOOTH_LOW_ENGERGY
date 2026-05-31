@@ -8,7 +8,7 @@ import requests
 import math
 import os
 import csv
-import argparse
+import time
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -33,8 +33,11 @@ class Location:
 @dataclass
 class EmergencyPacket:
     packet_id: str
+    event_type: str
     severity: str
     location: Location
+    timestamp: int
+    ttl: int = 3
 
 @dataclass
 class AgentResult:
@@ -67,6 +70,11 @@ def load_database() -> dict:
                 for i, row in enumerate(reader):
                     # THE FIX: Scrub the '@' symbol and spaces out of the column headers
                     keys = {k.lower().strip().replace('@', ''): k for k in row.keys() if k}
+                    id_prefix = {
+                        "hospitals": "HOSP",
+                        "police": "POLI",
+                        "tow_trucks": "TOW"
+                    }.get(category, category[:4].upper().replace("_", ""))
                     
                     lat_col = keys.get("lat") or keys.get("latitude") or keys.get("y")
                     lon_col = keys.get("lon") or keys.get("longitude") or keys.get("x")
@@ -75,7 +83,7 @@ def load_database() -> dict:
                     if lat_col and lon_col and row[lat_col] and row[lon_col]:
                         try:
                             item = {
-                                "id": f"{category[:4].upper()}-{i}",
+                                "id": f"{id_prefix}-{i}",
                                 "location": Location(float(row[lat_col]), float(row[lon_col])),
                                 "available": True # Default to true for logic
                             }
@@ -90,7 +98,7 @@ def load_database() -> dict:
                         except ValueError:
                             continue # Skip rows with corrupted GPS numbers
         else:
-            print(f"⚠️ Missing file: {filename}")
+            print(f"Missing file: {filename}")
 
     # Prefer emergency-routing/data CSVs, then fall back to legacy local names.
     hospitals_csv = resolve_existing_path([
@@ -101,20 +109,31 @@ def load_database() -> dict:
         os.path.join(DATA_DIR, "police_ne - interpreter.csv.csv"),
         os.path.join(BASE_DIR, "police.csv")
     ])
+    tow_csv = resolve_existing_path([
+        os.path.join(DATA_DIR, "towing_carrepair_ne - interpreter (1).csv.csv"),
+        os.path.join(BASE_DIR, "tow.csv"),
+        os.path.join(BASE_DIR, "tow_trucks.csv")
+    ])
 
     if hospitals_csv:
         parse_csv(hospitals_csv, "hospitals", "Hospital")
     else:
-        print("⚠️ Missing hospital CSV in emergency-routing/data and project root")
+        print("Missing hospital CSV in emergency-routing/data and project root")
 
     if police_csv:
         parse_csv(police_csv, "police", "Police_Station")
     else:
-        print("⚠️ Missing police CSV in emergency-routing/data and project root")
+        print("Missing police CSV in emergency-routing/data and project root")
+
+    if tow_csv:
+        parse_csv(tow_csv, "tow_trucks", "Tow_Truck")
+    else:
+        print("Missing tow CSV in emergency-routing/data and project root")
 
     # Local vehicle state targets for Guwahati mapping (Fakes so it doesn't crash)
     db["ambulances"] = [{"id": "AMB-01", "location": Location(26.140, 91.730), "available": True}]
-    db["tow_trucks"] = [{"id": "TOW-01", "location": Location(26.142, 91.720), "available": True}]
+    if not db["tow_trucks"]:
+        db["tow_trucks"] = [{"id": "TOW-01", "location": Location(26.142, 91.720), "available": True}]
     
     return db
 
@@ -207,15 +226,20 @@ class RoutingAgent(BaseAgent):
             return AgentResult(self.name, False, {}, f"GraphHopper offline server disconnected: {e}")
 
 
-def parse_coord(text: str) -> tuple[float, float]:
-    parts = [p.strip() for p in text.split(",")]
-    if len(parts) != 2:
-        raise ValueError("Coordinate must be in 'lat,lon' format")
-    return float(parts[0]), float(parts[1])
+# ─────────────────────────────────────────────
+# 4. Orchestrator Engine Execution
+# ─────────────────────────────────────────────
+if __name__ == "__main__":
+    # Simulated Emergency at Barsapara (single packet, simple flow)
+    crash_lat, crash_lon = 26.1445, 91.7362
 
-
-def run_dispatch(packet_id: str, lat: float, lon: float, severity: str = "critical") -> dict:
-    crash = EmergencyPacket(packet_id, severity, Location(lat, lon))
+    crash = EmergencyPacket(
+        "pkt_102",
+        "collision",
+        "critical",
+        Location(crash_lat, crash_lon),
+        int(time.time())
+    )
     agents = [HospitalAgent(), RoutingAgent(), AmbulanceAgent(), PoliceAgent(), TowAgent()]
     context, results, notes = {}, [], []
 
@@ -227,17 +251,18 @@ def run_dispatch(packet_id: str, lat: float, lon: float, severity: str = "critic
         if not res.success:
             notes.append(f"[{agent.name.upper()}] {res.reason}")
 
+    # Convert results list to dict for easy access
     res_dict = {r.agent: r for r in results}
 
+    # Format the police output to show the name if available
     police_output = None
     if res_dict.get("police") and res_dict["police"].success:
         police_unit = res_dict["police"].data.get("unit_id")
         police_name = res_dict["police"].data.get("name")
         police_output = f"{police_unit} ({police_name})" if police_name else police_unit
 
-    return {
+    plan = {
         "packet_id": crash.packet_id,
-        "input": {"lat": lat, "lon": lon},
         "ambulance": res_dict["ambulance"].data.get("unit_id") if res_dict.get("ambulance") and res_dict["ambulance"].success else None,
         "hospital": res_dict["hospital"].data.get("hospital_name") if res_dict.get("hospital") and res_dict["hospital"].success else None,
         "route_eta": res_dict["routing"].data.get("route_summary") if res_dict.get("routing") and res_dict["routing"].success else None,
@@ -246,35 +271,4 @@ def run_dispatch(packet_id: str, lat: float, lon: float, severity: str = "critic
         "notes": notes
     }
 
-# ─────────────────────────────────────────────
-# 4. Orchestrator Engine Execution
-# ─────────────────────────────────────────────
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Offline emergency coordinator")
-    parser.add_argument(
-        "--coord",
-        action="append",
-        help="Coordinate in 'lat,lon' format. Repeat for multiple incidents."
-    )
-    parser.add_argument(
-        "--severity",
-        default="critical",
-        help="Severity label for generated packets"
-    )
-    args = parser.parse_args()
-
-    coord_inputs = args.coord if args.coord else ["26.1445,91.7362"]
-
-    plans = []
-    for idx, coord_text in enumerate(coord_inputs, start=1):
-        try:
-            crash_lat, crash_lon = parse_coord(coord_text)
-        except ValueError as e:
-            print(json.dumps({"error": str(e), "coord": coord_text}, indent=2))
-            raise SystemExit(2)
-
-        packet_id = f"pkt_{idx:03d}"
-        plans.append(run_dispatch(packet_id, crash_lat, crash_lon, severity=args.severity))
-
-    output = plans[0] if len(plans) == 1 else plans
-    print("\n" + json.dumps(output, indent=2))
+    print("\n" + json.dumps(plan, indent=2))
