@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">BleMeshApp</string>
+    <string name="send_packet">Send Emergency Packet</string>
+    <string name="waiting_for_packets">Waiting for packets…</string>
+</resources>
