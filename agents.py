@@ -11,6 +11,7 @@ import csv
 import time
 from dataclasses import dataclass, field
 from typing import Optional
+from emergency_routing.llm_summary import generate_summary
 
 # ─────────────────────────────────────────────
 # 1. Core Data Types
@@ -50,7 +51,7 @@ class AgentResult:
 # 2. Database Loader
 # ─────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "emergency-routing", "data")
+DATA_DIR = os.path.join(BASE_DIR, "emergency_routing", "data")
 
 
 def resolve_existing_path(candidates: list[str]) -> Optional[str]:
@@ -222,8 +223,13 @@ class RoutingAgent(BaseAgent):
             dist_km = path["distance"] / 1000
             eta_mins = path["time"] / 60000
             return AgentResult(self.name, True, {"route_summary": f"{dist_km:.1f} km, ETA {eta_mins:.0f} mins"})
-        except Exception as e:
-            return AgentResult(self.name, False, {}, f"GraphHopper offline server disconnected: {e}")
+        except Exception:
+            return AgentResult(
+            self.name,
+            False,
+            {},
+            "Offline routing service unavailable"
+        )
 
 
 # ─────────────────────────────────────────────
@@ -270,5 +276,11 @@ if __name__ == "__main__":
         "tow": res_dict["tow"].data.get("unit_id") if res_dict.get("tow") and res_dict["tow"].success else None,
         "notes": notes
     }
+
+    summary = generate_summary(crash, plan)
+
+    plan["notes"].append(
+        f"[LLM SUMMARY] {summary}"
+    )
 
     print("\n" + json.dumps(plan, indent=2))
