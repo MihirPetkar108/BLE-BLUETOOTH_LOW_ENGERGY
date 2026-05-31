@@ -1,0 +1,7 @@
+# Python dependencies for the orchestrator
+requests>=2.28.1
+ollama>=0.1.0
+
+# Optional: add testing / linting tools if needed
+# pytest
+# ruff

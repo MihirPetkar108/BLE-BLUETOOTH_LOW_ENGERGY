@@ -48,11 +48,38 @@ env/
 *.pid
 
 # ------------------------------
-# GraphHopper generated caches/data
+# GraphHopper generated caches/data & routing artifacts
 # ------------------------------
+# support both directory name styles (hyphen and underscore)
 emergency-routing/data/graphhopper-cache/
+emergency_routing/data/graphhopper-cache/
 emergency-routing/data/default-gh/
+emergency_routing/data/default-gh/
 
-# Large routing/runtime binaries (usually not committed)
-emergency-routing/data/*.osm.pbf
-emergency-routing/jar/*.jar
+# Large routing/runtime binaries and OSM extracts
+**/data/*.osm.pbf
+**/jar/*.jar
+**/jar/*.zip
+
+# GraphHopper cache
+**/data/graphhopper-cache/**
+
+# ------------------------------
+# Node / JS
+# ------------------------------
+node_modules/
+dist/
+
+# ------------------------------
+# Environment / Secrets
+# ------------------------------
+.env
+.env.*
+secrets/
+
+# ------------------------------
+# Misc
+# ------------------------------
+*.sqlite
+*.db
+
