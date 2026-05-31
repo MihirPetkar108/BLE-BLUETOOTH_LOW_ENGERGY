@@ -1,15 +1,58 @@
-*.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+# ------------------------------
+# OS / Editor
+# ------------------------------
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
+Thumbs.db
+*.swp
+*.swo
+
+# VS Code
+.vscode/
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+
+# ------------------------------
+# Android / Gradle
+# ------------------------------
+.gradle/
 local.properties
+**/build/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# ------------------------------
+# Python
+# ------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+venv/
+env/
+
+# ------------------------------
+# Logs / Runtime temp
+# ------------------------------
+*.log
+*.out
+*.pid
+
+# ------------------------------
+# GraphHopper generated caches/data
+# ------------------------------
+emergency-routing/data/graphhopper-cache/
+emergency-routing/data/default-gh/
+
+# Large routing/runtime binaries (usually not committed)
+emergency-routing/data/*.osm.pbf
+emergency-routing/jar/*.jar
