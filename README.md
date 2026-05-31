@@ -155,3 +155,7 @@ curl -s -X POST "http://localhost:8989/route" -H "Content-Type: application/json
 
 If you want, I can implement the safe fallback for the LLM now or scaffold a Docker Compose to run everything together.
 
+## START THE SERVERS
+
+cd emergency_routing/
+bash start_server.sh
