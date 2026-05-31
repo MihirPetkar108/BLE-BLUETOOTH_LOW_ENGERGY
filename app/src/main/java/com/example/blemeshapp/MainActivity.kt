@@ -4,6 +4,8 @@ import android.Manifest
 import android.os.Build
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -12,9 +14,15 @@ import androidx.core.content.ContextCompat
 import org.json.JSONObject
 import java.util.UUID
 
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.FusedLocationProviderClient
+
 class MainActivity : AppCompatActivity() {
 
     private lateinit var receivedMessageView: TextView
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private var currentLatitude: Double = 0.0
+    private var currentLongitude: Double = 0.0
 
     fun showReceivedMessage(message: String) {
         runOnUiThread {
@@ -29,6 +37,38 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         receivedMessageView = findViewById(R.id.receivedDataText)
         receivedMessageView.text = getString(R.string.waiting_for_packets)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        getCurrentLocation()
+
+        val eventTypeSpinner = findViewById<Spinner>(R.id.eventTypeSpinner)
+        val severitySpinner = findViewById<Spinner>(R.id.severitySpinner)
+
+        val eventTypes = arrayOf(
+            "collision",
+            "road_block",
+            "traffic_jam",
+            "accident",
+            "hazard"
+        )
+
+        val severities = arrayOf(
+            "low",
+            "medium",
+            "high",
+            "critical"
+        )
+
+        eventTypeSpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            eventTypes
+        )
+
+        severitySpinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_dropdown_item,
+            severities
+        )
 
         requestPermissions()
 
@@ -42,15 +82,31 @@ class MainActivity : AppCompatActivity() {
                 val packet = JSONObject()
 
                 packet.put("packetId", UUID.randomUUID().toString())
-                packet.put("eventType", "collision")
-                packet.put("severity", "critical")
-                packet.put("latitude", 27.7172)
-                packet.put("longitude", 85.3240)
+                packet.put("eventType", eventTypeSpinner.selectedItem.toString())
+                packet.put("severity", severitySpinner.selectedItem.toString())
+                packet.put("latitude", currentLatitude)
+                packet.put("longitude", currentLongitude)
                 packet.put("timestamp", System.currentTimeMillis())
-                packet.put("ttl", 3)
+                packet.put("ttl", 150)
 
                 MeshManager.relayPacket(packet.toString())
             }
+    }
+
+    private fun getCurrentLocation() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedLocationClient.lastLocation
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        currentLatitude = location.latitude
+                        currentLongitude = location.longitude
+                    }
+                }
+        }
     }
 
     private fun startBleComponents() {

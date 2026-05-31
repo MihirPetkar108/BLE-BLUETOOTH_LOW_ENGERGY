@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">BleMeshApp</string>
-    <string name="send_packet">Send Emergency Packet</string>
+
+    <string name="event_type">Event Type</string>
+    <string name="severity">Severity</string>
     <string name="waiting_for_packets">Waiting for packets…</string>
+
+    <string name="send_packet">SEND EMERGENCY PACKET</string>
 </resources>

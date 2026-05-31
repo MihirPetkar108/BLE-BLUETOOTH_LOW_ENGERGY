@@ -5,6 +5,32 @@
     android:orientation="vertical"
     android:padding="24dp">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/event_type"
+        android:textStyle="bold"
+        android:layout_marginTop="24dp"
+        android:layout_marginBottom="4dp" />
+    <Spinner
+        android:id="@+id/eventTypeSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/severity"
+        android:textStyle="bold"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp" />
+
+    <Spinner
+        android:id="@+id/severitySpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp" />
+
     <Button
         android:id="@+id/sendPacketBtn"
         android:layout_width="match_parent"
@@ -19,7 +45,7 @@
         android:background="@android:drawable/editbox_background"
         android:padding="12dp"
         android:paddingTop="20dp"
-        android:text="Waiting for packets..."
+        android:text="@string/waiting_for_packets"
         android:textSize="16sp" />
 
 </LinearLayout>
